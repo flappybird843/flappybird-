@@ -1,0 +1,1325 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Flappy Bird🦚</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+  <style>
+        :root {
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --text-color: #ffffff;
+            --text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Poppins', sans-serif;
+            background-color: #333;
+            user-select: none;
+        }
+
+        .game-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .game-container {
+            position: relative;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        canvas {
+            display: block;
+            background: #87CEEB;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            color: var(--text-color);
+            text-shadow: var(--text-shadow);
+        }
+        
+        /* --- LOADING SCREEN STYLES --- */
+        #loadingScreen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            z-index: 100; /* Ensure it is on top of everything */
+            transition: opacity 0.5s ease;
+        }
+        .loading-title {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #FFD700; /* Gold color */
+        }
+        .loading-bar-container {
+            width: 80%;
+            max-width: 300px;
+            height: 15px;
+            background: #555;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4CAF50, #81C784);
+            transition: width 0.3s ease;
+        }
+        .loading-text {
+            margin-top: 10px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+        /* ------------------------------- */
+
+        .in-game-ui {
+            display: none;
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: #FFEB3B; /* Yellow */
+        }
+
+        .coins {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            color: #FFD700; /* Gold */
+        }
+        
+        .powerup-timer {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.5);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 1em;
+            display: none;
+        }
+
+        /* --- Menus --- */
+        .menu {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            pointer-events: none; /* Menus start inactive */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .menu.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all; /* Active menu allows interaction */
+        }
+
+        .menu-title {
+            font-size: 3em;
+            margin-bottom: 5px;
+            color: var(--text-color);
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .menu-info {
+            font-size: 0.8em;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .menu-btn {
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-bottom: 4px solid rgba(0,0,0,0.2);
+        }
+        
+        .menu-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .menu-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Gradients */
+        .btn-play { background: linear-gradient(45deg, #4CAF50, #81C784); }
+        .btn-shop { background: linear-gradient(45deg, #FF9800, #FFB74D); }
+        .btn-bg { background: linear-gradient(45deg, #2196F3, #64B5F6); }
+        .btn-birds { background: linear-gradient(45deg, #9C27B0, #BA68C8); }
+        .btn-rank { background: linear-gradient(45deg, #F44336, #E57373); }
+        .btn-quiet { background: linear-gradient(45deg, #607D8B, #90A4AE); }
+
+        /* --- Modals (Shop, BG, etc.) --- */
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 450px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .modal-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .modal-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 120px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-item.selected {
+            border-color: #FFD700;
+            transform: scale(1.05);
+        }
+        
+        .modal-item.locked {
+            opacity: 0.7;
+        }
+
+        .modal-item:not(.locked):hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .item-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 2px solid rgba(255,255,255,0.5);
+            /* For images */
+            background-size: cover;
+            background-position: center;
+        }
+
+        .item-price {
+            font-weight: 700;
+            color: #FFD700;
+        }
+
+        .back-btn {
+            margin-top: 30px;
+            width: 150px;
+            background: linear-gradient(45deg, #757575, #9E9E9E);
+        }
+        
+        .shop-coins {
+            font-size: 1.5em;
+            color: #FFD700;
+            margin-bottom: 20px;
+        }
+        
+        .shop-section-title {
+            width: 100%;
+            text-align: center;
+            font-size: 1.8em;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        .rank-display {
+            font-size: 2em;
+            text-align: center;
+        }
+        .rank-icon { font-size: 3em; }
+
+        /* --- Game Over --- */
+        #gameOverMenu {
+            text-align: center;
+        }
+        #gameOverMenu p {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+
+        /* --- Info Button / News Button --- */
+        .info-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: transform 0.2s ease, background 0.2s ease;
+            display: flex; /* Centers emoji/icon */
+            justify-content: center;
+            align-items: center;
+        }
+        .info-btn:hover {
+            transform: scale(1.1);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .info-btn:active {
+            transform: scale(1);
+        }
+        
+        /* Positioning for News Button (bottom left) */
+        #newsBtn {
+            right: auto;
+            left: 20px;
+        }
+
+
+        /* --- Info Modal / News Modal --- */
+        .info-modal {
+            padding: 30px;
+            max-width: 500px;
+            text-align: center;
+        }
+        .info-modal h2 {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+        .info-modal p {
+            font-size: 1em;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .info-modal ul {
+            text-align: left;
+            margin: 10px 0 0 20px;
+        }
+        .info-modal li {
+            margin-bottom: 5px;
+            list-style-type: '👉 ';
+        }
+        .info-modal .back-btn {
+            margin-top: 25px;
+        }
+
+    </style>
+ </head>
+ <body>
+  <div class="game-wrapper">
+   <div class="game-container">
+    <div id="loadingScreen">
+     <h1 class="loading-title">Flappy Bird🦚</h1>
+     <div class="loading-bar-container">
+      <div id="loadingBar" class="loading-bar"></div>
+     </div>
+     <p id="loadingText" class="loading-text">Loading ⏳... 0%</p>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="ui-overlay">
+     <div id="inGameUI" class="in-game-ui">
+      <div class="score" id="score">0</div>
+      <div class="coins" id="coins">💰 0</div>
+      <div class="powerup-timer" id="powerupTimer"></div>
+     </div>
+     <div id="mainMenu" class="menu">
+      <h1 class="menu-title" style="background: linear-gradient(to right, #FF0000, #FFA500, #FFFF00, #008000, #0000FF, #4B0082); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Flappy Bird🦚</h1>
+      <div class="menu-grid">
+       <button id="playBtn" class="menu-btn btn-play">Play</button>
+       <button id="shopBtn" class="menu-btn btn-shop">Shop</button>
+       <button id="bgBtn" class="menu-btn btn-bg">Backgrounds</button>
+       <button id="birdsBtn" class="menu-btn btn-birds">Birds</button>
+       <button id="rankBtn" class="menu-btn btn-rank">Rank</button>
+       <button id="quietBtn" class="menu-btn btn-quiet">Sound: On</button>
+      </div>
+      <button id="newsBtn" class="info-btn" style="right: auto; left: 20px;">📰</button>
+      <button id="infoBtn" class="info-btn">ℹ️</button>
+     </div>
+     <div id="newsMenu" class="menu">
+      <div class="info-modal">
+       <h2>New Updates</h2>
+       <p style="text-align: left;"></p>
+       <p></p>
+       <h3>Version 1.1</h3>
+       • Added new image-based pipe designs with theme rotation every 10 points.
+       <br>
+       • Implemented this new 'News' button for updates.
+       <br>
+       • Fixed the Info icon visibility issue on the main menu.
+       <br>
+       • Added new image birds and new image backgrounds.
+       <br>
+       -If you want to suggest something
+       <br>
+       •Suggest on manjuagarwal892@gmail.com 
+       <p></p>
+      </div>
+      <button class="menu-btn back-btn" data-target="mainMenu">Back</button>
+     </div>
+     <div id="infoMenu" class="menu">
+      <div class="info-modal">
+       <p><strong>Controls:</strong></p>
+       <ul>
+        <li>Click or tap anywhere on the screen to make the bird Fly🕊.</li>
+        <li>Press the 'Space' bar on your keyboard to Fly🕊.</li>
+       </ul>
+       <p>Collect coins to unlock new birds and backgrounds, and grab power-ups for a boost!</p>
+        <p>Create With Love♥️ By Naitik Agarwal</p>
+       <p>Creator:Naitik Agarwal</p>
+      </div>
+      <button class="menu-btn back-btn" data-target="mainMenu">Back</button>
+     </div>
+     <div id="shopMenu" class="menu">
+      <h1 class="menu-title">Shop</h1>
+      <div id="shopCoins" class="shop-coins">💰 0</div>
+      <div id="shopItems" class="modal-content"></div>
+      <button class="menu-btn back-btn" data-target="mainMenu">Back</button>
+     </div>
+     <div id="bgMenu" class="menu">
+      <h1 class="menu-title">Backgrounds</h1>
+      <div id="bgItems" class="modal-content">
+       <div class="modal-grid"></div>
+      </div>
+      <button class="menu-btn back-btn" data-target="mainMenu">Back</button>
+     </div>
+     <div id="birdsMenu" class="menu">
+      <h1 class="menu-title">Select Bird</h1>
+      <div id="birdItems" class="modal-content">
+       <div class="modal-grid"></div>
+      </div>
+      <button class="menu-btn back-btn" data-target="mainMenu">Back</button>
+     </div>
+     <div id="rankMenu" class="menu">
+      <h1 class="menu-title">Your Rank</h1>
+      <div id="rankDisplay" class="rank-display"></div>
+      <button class="menu-btn back-btn" data-target="mainMenu">Back</button>
+     </div>
+     <div id="gameOverMenu" class="menu">
+      <h1 class="menu-title">Game Over</h1>
+      <p id="finalScore">Score: 0</p>
+      <p id="highScore">Best: 0</p>
+      <div class="menu-grid">
+       <button id="restartBtn" class="menu-btn btn-play">Restart</button>
+       <button class="menu-btn back-btn" data-target="mainMenu">Menu</button>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+(function() {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // UI Elements (Updated for Loading Screen)
+    const ui = {
+        score: document.getElementById('score'),
+        coins: document.getElementById('coins'),
+        powerupTimer: document.getElementById('powerupTimer'),
+        inGameUI: document.getElementById('inGameUI'),
+        mainMenu: document.getElementById('mainMenu'),
+        infoMenu: document.getElementById('infoMenu'),
+        newsMenu: document.getElementById('newsMenu'),
+        shopMenu: document.getElementById('shopMenu'),
+        bgMenu: document.getElementById('bgMenu'),
+        birdsMenu: document.getElementById('birdsMenu'),
+        rankMenu: document.getElementById('rankMenu'),
+        gameOverMenu: document.getElementById('gameOverMenu'),
+        shopItems: document.getElementById('shopItems'),
+        bgItems: document.querySelector('#bgItems .modal-grid'),
+        birdItems: document.querySelector('#birdItems .modal-grid'),
+        shopCoins: document.getElementById('shopCoins'),
+        rankDisplay: document.getElementById('rankDisplay'),
+        finalScore: document.getElementById('finalScore'),
+        highScore: document.getElementById('highScore'),
+        quietBtn: document.getElementById('quietBtn'),
+        infoBtn: document.getElementById('infoBtn'),
+        newsBtn: document.getElementById('newsBtn'),
+        
+        // NEW LOADING SCREEN ELEMENTS
+        loadingScreen: document.getElementById('loadingScreen'),
+        loadingBar: document.getElementById('loadingBar'),
+        loadingText: document.getElementById('loadingText'),
+    };
+    
+    // Game state
+    let gameState = 'loading'; // START in loading state
+    let frame = 0;
+    let score = 0;
+    let matchCoins = 0; // Coins for the current match
+    let pipes = [];
+    let collectibles = []; // coins and powerups
+    let particles = [];
+    let soundEnabled = true;
+    let assetsLoaded = false;
+    let assetsToLoad = 0;
+    let assetsLoadedCount = 0;
+
+    // Game data with defaults (These are the initial values for a brand new player)
+    let gameData = {
+        totalCoins: 0,
+        highScore: 0,
+        // *** DESIRED DEFAULTS FOR A FRESH START ***
+        unlockedBirds: ['white_hen'], 
+        selectedBird: 'white_hen', 
+        unlockedBackgrounds: ['pixel_sky', 'fantasy_forest'], 
+        selectedBackground: 'fantasy_forest', 
+        // *****************************************
+        rank: 'Bronze'
+    };
+
+    // Game settings
+    const CONFIG = {
+        GRAVITY: 0.4,
+        LIFT: -8,
+        PIPE_SPEED: 3,
+        PIPE_WIDTH: 60,
+        PIPE_GAP: 160,
+        PIPE_SPAWN_RATE: 80, // frames
+        POWERUP_DURATION: 300, // frames (5 seconds)
+        PIPE_THEME_DURATION: 10 // score points per theme
+    };
+    
+    // --- Asset Definitions with your URLs ---
+    
+    const BIRD_ASSET_URLS = {
+        white_hen: "https://i.postimg.cc/pT70DjD1/Picsart-25-09-27-15-30-38-990-r1-c1-processed-by-imagy.png",
+        brown_hen: "https://i.postimg.cc/TwSkrbr9/Picsart-25-09-27-15-30-38-990-r1-c2-processed-by-imagy.png",
+        rooster: "https://i.postimg.cc/VvCK4Ngs/Picsart-25-09-27-15-30-38-990-r1-c3-processed-by-imagy.png",
+        sparrow_finch: "https://i.postimg.cc/nrD3TLkN/Picsart-25-09-27-15-30-38-990-r1-c4-processed-by-imagy.png",
+        bluebird: "https://i.postimg.cc/Ss5ZW9Wf/Picsart-25-09-27-15-30-38-990-r1-c5-processed-by-imagy.png",
+        macaw: "https://i.postimg.cc/rmbhS4Sn/Picsart-25-09-27-15-30-38-990-r2-c1-processed-by-imagy.png",
+        parakeet: "https://i.postimg.cc/KzV9nTnL/Picsart-25-09-27-15-30-38-990-r2-c2-processed-by-imagy.png",
+        duckling: "https://i.postimg.cc/7h2KXLVc/Picsart-25-09-27-15-30-38-990-r2-c3-processed-by-imagy.png",
+        duck: "https://i.postimg.cc/d3y5n0B6/Picsart-25-09-27-15-30-38-990-r2-c4-processed-by-imagy.png",
+        mallard_duck: "https://i.postimg.cc/SRMgVKrw/Picsart-25-09-27-15-30-38-990-r2-c5-processed-by-imagy.png",
+        dove: "https://i.postimg.cc/tTfrh6h2/Picsart-25-09-27-15-30-38-990-r3-c2-processed-by-imagy.png", 
+        pigeon: "https://i.postimg.cc/j598zfzm/Picsart-25-09-27-15-30-38-990-r3-c3-processed-by-imagy.png", 
+        toucan: "https://i.postimg.cc/5yCsptg4/Picsart-25-09-27-15-30-38-990-r3-c4-processed-by-imagy.png", 
+        cardinal: "https://i.postimg.cc/NMVN1X1C/Picsart-25-09-27-15-30-38-990-r3-c5-processed-by-imagy.png", 
+        kingfisher: "https://i.postimg.cc/hjwC9m90/Picsart-25-09-27-15-30-38-990-r4-c1-processed-by-imagy.png", 
+        crow: "https://i.postimg.cc/TwSkrbrZ/Picsart-25-09-27-15-30-38-990-r4-c2-processed-by-imagy.png", 
+        kiwi: "https://i.postimg.cc/63SHdZdm/Picsart-25-09-27-15-30-38-990-r4-c3-processed-by-imagy.png", 
+        quail: "https://i.postimg.cc/D0Xx5zgH/Picsart-25-09-27-15-30-38-990-r4-c4-processed-by-imagy.png", 
+        chick: "https://i.postimg.cc/0Q3tpSph/Picsart-25-09-27-15-30-38-990-r4-c5-processed-by-imagy.png" 
+    };
+
+    const BACKGROUND_ASSET_URLS = {
+        pixel_sky: "https://i.postimg.cc/15Mq2QjY/1.jpg", 
+        cartoon_sky: "https://i.postimg.cc/Cx1qV2yL/360-F-340522236-u1i-Uo-IYm-JFs-Sof-Wcn-NXomx7pq-KIKCRIw.jpg",
+        fantasy_forest: "https://i.postimg.cc/9QM7jk37/images.jpg",
+        day_road: "https://i.postimg.cc/sD3WTXw6/images-1.jpg",
+        pixel_level: "https://i.postimg.cc/K8zMyWXx/pixel-art-game-level-background-600nw-2553891639.jpg",
+        mystical: "https://i.postimg.cc/g2JZP792/pixel-art-mystical-background-52683-87349.jpg"
+    };
+    
+    // --- NEW PIPE ASSET DEFINITIONS ---
+    const PIPE_DOWN_URLS = [
+       
+    "https://i.postimg.cc/BQSChH6F/In-Shot-20251002-131343433.png",
+    "https://i.postimg.cc/c4xcDwHK/In-Shot-20251002-131516528.png",
+    "https://i.postimg.cc/VLfF7n6d/In-Shot-20251002-131640705.png",
+    "https://i.postimg.cc/8PpbyM5H/In-Shot-20251002-131804537.png",
+    "https://i.postimg.cc/Xq8kj727/In-Shot-20251002-131913840.png"     
+     ];
+    const PIPE_UP_URLS = [
+        
+        "https://i.postimg.cc/d38S8Y5Q/In-Shot-20251002-131442029.png",
+        "https://i.postimg.cc/zvnPnrxz/In-Shot-20251002-131556341.png",
+        "https://i.postimg.cc/WzRHF3wv/In-Shot-20251002-131716263.png",
+        "https://i.postimg.cc/gjvBvWg2/In-Shot-20251002-131836947.png",
+        "https://i.postimg.cc/0NB3vZ61/In-Shot-20251002-131941443.png"
+        ];
+    
+    // --- END NEW PIPE ASSET DEFINITIONS ---
+
+    // --- Asset Objects (New Section) ---
+    const ASSETS = {};
+
+    // UPDATED: Function to load assets with progress tracking
+    function loadAssets(assetMapOrArray, type) {
+        let assetsToProcess;
+        if (Array.isArray(assetMapOrArray)) {
+            assetsToProcess = assetMapOrArray.map((url, index) => [`${type}_${index}`, url]);
+        } else {
+            assetsToProcess = Object.entries(assetMapOrArray);
+        }
+
+        assetsToProcess.forEach(([key, url]) => {
+            const img = new Image();
+            img.onload = () => {
+                assetsLoadedCount++;
+                updateLoadingScreen();
+                if (assetsLoadedCount === assetsToLoad) {
+                    assetsLoaded = true;
+                    hideLoadingScreen(); // New: Hide screen and show menu
+                    requestAnimationFrame(gameLoop);
+                }
+            };
+            img.onerror = () => {
+                console.error(`Failed to load asset: ${key} from ${url}. Using fallback.`);
+                assetsLoadedCount++; 
+                updateLoadingScreen();
+            };
+            img.src = url;
+            ASSETS[key] = { img, type, url };
+        });
+    }
+    
+    // NEW: Function to update the loading bar
+    function updateLoadingScreen() {
+        const percent = Math.floor((assetsLoadedCount / assetsToLoad) * 100);
+        ui.loadingBar.style.width = `${percent}%`;
+        ui.loadingText.textContent = `Loading Assets... ${percent}%`;
+    }
+    
+    // NEW: Function to hide the loading screen and show the menu
+    function hideLoadingScreen() {
+        ui.loadingScreen.style.opacity = '0';
+        setTimeout(() => {
+            ui.loadingScreen.style.display = 'none';
+            // Show the main menu only after loading is complete
+            openMenu(ui.mainMenu);
+            gameState = 'menu';
+        }, 500); // Wait for fade out
+    }
+
+    // --- Asset Definitions for Logic (Updated) ---
+    const BIRDS = {
+        white_hen: { price: 0, preview: BIRD_ASSET_URLS.white_hen, name: 'White Hen' },
+        brown_hen: { price: 50, preview: BIRD_ASSET_URLS.brown_hen, name: 'Brown Hen' },
+        rooster: { price: 75, preview: BIRD_ASSET_URLS.rooster, name: 'Rooster' },
+        sparrow_finch: { price: 100, preview: BIRD_ASSET_URLS.sparrow_finch, name: 'Sparrow/Finch' },
+        bluebird: { price: 125, preview: BIRD_ASSET_URLS.bluebird, name: 'Bluebird' },
+        macaw: { price: 150, preview: BIRD_ASSET_URLS.macaw, name: 'Macaw' },
+        parakeet: { price: 175, preview: BIRD_ASSET_URLS.parakeet, name: 'Parakeet' },
+        duckling: { price: 300, preview: BIRD_ASSET_URLS.duckling, name: 'Duckling' },
+        duck: { price: 350, preview: BIRD_ASSET_URLS.duck, name: 'Duck' },
+        mallard_duck: { price: 400, preview: BIRD_ASSET_URLS.mallard_duck, name: 'Mallard Duck' },
+        dove: { price: 500, preview: BIRD_ASSET_URLS.dove, name: 'Dove' },
+        pigeon: { price: 750, preview: BIRD_ASSET_URLS.pigeon, name: 'Pigeon' },
+        toucan: { price: 850, preview: BIRD_ASSET_URLS.toucan, name: 'Toucan' },
+        cardinal: { price: 1000, preview: BIRD_ASSET_URLS.cardinal, name: 'Cardinal' },
+        kingfisher: { price: 1100, preview: BIRD_ASSET_URLS.kingfisher, name: 'Kingfisher' },
+        crow: { price: 1200, preview: BIRD_ASSET_URLS.crow, name: 'Crow' },
+        kiwi: { price: 1300, preview: BIRD_ASSET_URLS.kiwi, name: 'Kiwi' },
+        quail: { price: 1400, preview: BIRD_ASSET_URLS.quail, name: 'Quail' },
+        chick: { price: 1500, preview: BIRD_ASSET_URLS.chick, name: 'Chick' }
+    };
+
+    const BACKGROUNDS = {
+        pixel_sky: { price: 0, preview: BACKGROUND_ASSET_URLS.pixel_sky, name: 'Pixel Sky' },
+        cartoon_sky: { price: 150, preview: BACKGROUND_ASSET_URLS.cartoon_sky, name: 'Cartoon Sky' },
+        fantasy_forest: { price: 0, preview: BACKGROUND_ASSET_URLS.fantasy_forest, name: 'Fantasy Forest' }, 
+        day_road: { price: 250, preview: BACKGROUND_ASSET_URLS.day_road, name: 'Day Road' },
+        pixel_level: { price: 300, preview: BACKGROUND_ASSET_URLS.pixel_level, name: 'Pixel Level' },
+        mystical: { price: 400, preview: BACKGROUND_ASSET_URLS.mystical, name: 'Mystical' }
+    };
+    
+    // Original RANKS and POWERUPS remain here...
+    const RANKS = {
+        Bronze: { score: 0, icon: '🥉', color: '#CD7F32' },
+        Silver: { score: 10, icon: '🥈', color: '#C0C0C0' },
+        Gold: { score: 25, icon: '🥇', color: '#FFD700' },
+        Platinum: { score: 50, icon: '💎', color: '#E5E4E2' },
+        Diamond: { score: 100, icon: '🏆', color: '#B9F2FF' }
+    };
+    
+    const POWERUPS = {
+        shield: { color: '#3498DB', symbol: '🛡', action: activateShield },
+        magnet: { color: '#F1C40F', symbol: '🧲', action: activateMagnet },
+        extraLife: { color: '#E74C3C', symbol: '❤', action: activateExtraLife },
+        shrink: { color: '#9B59B6', symbol: '🤏', action: activateShrink }
+    };
+
+
+    // Bird object
+    const bird = {
+        x: 100,
+        y: 150,
+        baseWidth: 40,
+        baseHeight: 30,
+        width: 46,
+        height: 40,
+        velocity: 0,
+        rotation: 0,
+        // Power-up states
+        shieldActive: false,
+        magnetActive: false,
+        extraLifeActive: false,
+        shrinkActive: false,
+        powerupTimer: 0
+    };
+    
+    // Sound synthesis
+    const synth = new Tone.Synth().toDestination();
+    const sounds = {
+        flap: () => soundEnabled && synth.triggerAttackRelease("C5", "8n"),
+        score: () => soundEnabled && synth.triggerAttackRelease("E5", "8n"),
+        coin: () => soundEnabled && synth.triggerAttackRelease("G5", "16n"),
+        powerup: () => soundEnabled && synth.triggerAttackRelease("A5", "8n"),
+        hit: () => soundEnabled && synth.triggerAttackRelease("C4", "8n"),
+        click: () => soundEnabled && synth.triggerAttackRelease("C6", "16n"),
+    };
+
+    // --- Setup and Initialization ---
+    function init() {
+        resizeCanvas();
+        loadGameData(); // Load data and apply forced defaults
+        setupEventListeners();
+        
+        // Count total assets to load
+        assetsToLoad = (Object.keys(BIRD_ASSET_URLS).length + 
+                        Object.keys(BACKGROUND_ASSET_URLS).length + 
+                        PIPE_DOWN_URLS.length + 
+                        PIPE_UP_URLS.length); 
+
+        // Load all assets
+        loadAssets(BIRD_ASSET_URLS, 'bird');
+        loadAssets(BACKGROUND_ASSET_URLS, 'background');
+        loadAssets(PIPE_DOWN_URLS, 'pipe_down');
+        loadAssets(PIPE_UP_URLS, 'pipe_up');
+
+        updateUI();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Initial Draw to show a background on the canvas behind the loading screen
+        draw(); 
+    }
+    
+    function resizeCanvas() {
+        const container = document.querySelector('.game-container');
+        const aspectRatio = 9 / 16;
+        const h = Math.min(window.innerHeight * 0.95, 800);
+        const w = h * aspectRatio;
+        
+        container.style.width = `${w}px`;
+        container.style.height = `${h}px`;
+        canvas.width = w;
+        canvas.height = h;
+    }
+    
+    // --- Data Persistence ---
+    function loadGameData() {
+        const savedData = localStorage.getItem('flappyBirdDeluxeData');
+        if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            gameData = {...gameData, ...parsedData};
+        }
+        
+        // >>>>> START OF THE FIX <<<<<
+        
+        // 1. Ensure Fantasy Forest is UNLOCKED for everyone (even old saves)
+        if (!gameData.unlockedBackgrounds.includes('fantasy_forest')) {
+             gameData.unlockedBackgrounds.push('fantasy_forest');
+        }
+
+        // 2. FORCE the desired character and background to be selected 
+        //    regardless of what was saved previously.
+        gameData.selectedBird = 'white_hen';
+        gameData.selectedBackground = 'fantasy_forest';
+        
+        // 3. Save the fixed state immediately so it becomes the new default
+        saveGameData(); 
+
+        // >>>>> END OF THE FIX <<<<<
+    }
+    
+    function saveGameData() {
+        localStorage.setItem('flappyBirdDeluxeData', JSON.stringify(gameData));
+    }
+    
+    // --- Game Loop ---
+    function gameLoop() {
+        if (!assetsLoaded) return; // Wait for assets to load
+
+        if (gameState === 'playing') {
+            update();
+        }
+        draw();
+        frame++;
+        requestAnimationFrame(gameLoop);
+    }
+
+    // --- Update Logic ---
+    function update() {
+        // Bird physics
+        bird.velocity += CONFIG.GRAVITY;
+        bird.y += bird.velocity;
+        bird.rotation = Math.min(Math.max(bird.velocity / 20, -Math.PI / 4), Math.PI / 4);
+
+        // Ground and ceiling collision
+        if (bird.y + bird.height / 2 > canvas.height || bird.y - bird.height / 2 < 0) {
+            gameOver();
+        }
+        
+        // Power-up timer
+        if (bird.powerupTimer > 0) {
+            bird.powerupTimer--;
+            if (bird.powerupTimer === 0) {
+                deactivateAllPowerups();
+            }
+        }
+        ui.powerupTimer.style.display = bird.powerupTimer > 0 ? 'block' : 'none';
+        ui.powerupTimer.textContent = `Power-up: ${Math.ceil(bird.powerupTimer / 60)}s`;
+
+        // Update pipes
+        if (frame % CONFIG.PIPE_SPAWN_RATE === 0) {
+            spawnPipe();
+        }
+        pipes.forEach(p => {
+            p.x -= CONFIG.PIPE_SPEED;
+            if (!p.passed && p.x + CONFIG.PIPE_WIDTH < bird.x) {
+                p.passed = true;
+                score++;
+                ui.score.textContent = score;
+                sounds.score();
+            }
+        });
+        pipes = pipes.filter(p => p.x + CONFIG.PIPE_WIDTH > 0);
+        
+        // Update collectibles
+        collectibles.forEach(c => {
+            c.x -= CONFIG.PIPE_SPEED;
+            if(bird.magnetActive) {
+                const dx = bird.x - c.x;
+                const dy = bird.y - c.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 150) {
+                    c.x += dx / dist * 5;
+                    c.y += dy / dist * 5;
+                }
+            }
+        });
+        collectibles = collectibles.filter(c => c.x + c.radius > 0);
+        
+        // Update particles
+        particles.forEach((p, i) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.1;
+            p.alpha -= 0.02;
+            if (p.alpha <= 0) particles.splice(i, 1);
+        });
+
+        checkCollisions();
+    }
+    
+    // --- Drawing Logic (UPDATED TO DRAW PIPE IMAGES) ---
+    function draw() {
+        // Background (Use image asset)
+        const bgAsset = ASSETS[gameData.selectedBackground];
+        if (bgAsset && bgAsset.img.complete) {
+            ctx.drawImage(bgAsset.img, 0, 0, canvas.width, canvas.height);
+        } else {
+            // Fallback to a solid color if image hasn't loaded
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Pipes (Now drawn with images)
+        pipes.forEach(p => {
+            // Get the correct image assets based on the pipeIndex
+            const pipeIndex = p.pipeIndex || 0;
+            const pipeDownAsset = ASSETS[`pipe_down_${pipeIndex}`];
+            const pipeUpAsset = ASSETS[`pipe_up_${pipeIndex}`];
+            
+            // Draw TOP pipe (Down image)
+            if (pipeDownAsset && pipeDownAsset.img.complete) {
+                ctx.drawImage(pipeDownAsset.img, p.x, 0, CONFIG.PIPE_WIDTH, p.topHeight);
+            } else {
+                // Fallback: simple green pipe
+                ctx.fillStyle = '#27AE60';
+                ctx.fillRect(p.x, 0, CONFIG.PIPE_WIDTH, p.topHeight);
+            }
+            
+            // Draw BOTTOM pipe (Up image)
+            const bottomY = canvas.height - p.bottomHeight;
+            if (pipeUpAsset && pipeUpAsset.img.complete) {
+                ctx.drawImage(pipeUpAsset.img, p.x, bottomY, CONFIG.PIPE_WIDTH, p.bottomHeight);
+            } else {
+                // Fallback: simple green pipe
+                ctx.fillStyle = '#27AE60';
+                ctx.fillRect(p.x, bottomY, CONFIG.PIPE_WIDTH, p.bottomHeight);
+            }
+        });
+        
+        // Collectibles (No change needed here, still drawn with color/emojis)
+        collectibles.forEach(c => {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.fillStyle = c.color;
+            ctx.beginPath();
+            if (c.type === 'coin') {
+                ctx.arc(0, 0, c.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.font = 'bold 20px Poppins'; // Need to set font for emoji to display
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('💰', 0, 1);
+            } else {
+                ctx.arc(0, 0, c.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFF';
+                ctx.font = 'bold 20px Poppins';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(c.symbol, 0, 1);
+            }
+            ctx.restore();
+        });
+        
+        // Particles
+        particles.forEach(p => {
+            ctx.fillStyle = `rgba(${p.r}, ${p.g}, ${p.b}, ${p.alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Bird (Use image asset)
+        ctx.save();
+        ctx.translate(bird.x, bird.y);
+        ctx.rotate(bird.rotation);
+        
+        // Power-up indicators (draw over or under the bird image)
+        if(bird.shieldActive) {
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.5)';
+            ctx.beginPath();
+            ctx.arc(0, 0, bird.width / 2 + 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if(bird.magnetActive) {
+            ctx.strokeStyle = 'rgba(241, 196, 15, 0.7)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, bird.width/2 + 15 + Math.sin(frame * 0.2) * 3, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Draw the Bird Image
+        const birdAsset = ASSETS[gameData.selectedBird];
+        if (birdAsset && birdAsset.img.complete) {
+            // Draw the image centered at (0, 0) relative to the rotation point
+            ctx.drawImage(
+                birdAsset.img, 
+                -bird.width / 2, 
+                -bird.height / 2, 
+                bird.width, 
+                bird.height
+            );
+        } else {
+            // Fallback (Simple Red Circle)
+            ctx.fillStyle = '#E74C3C';
+            ctx.beginPath();
+            ctx.arc(0, 0, bird.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+    
+    // --- Collision Detection (No change needed) ---
+    function checkCollisions() {
+        // Simplified collision box for the bird image
+        const birdLeft = bird.x - bird.width / 2;
+        const birdRight = bird.x + bird.width / 2;
+        const birdTop = bird.y - bird.height / 2;
+        const birdBottom = bird.y + bird.height / 2;
+        
+        for (const p of pipes) {
+            // Check for horizontal overlap with pipe
+            if (birdRight > p.x && birdLeft < p.x + CONFIG.PIPE_WIDTH) {
+                // Check for vertical collision with top or bottom pipe section
+                if (birdTop < p.topHeight || birdBottom > canvas.height - p.bottomHeight) {
+                    handleCollision();
+                    return;
+                }
+            }
+        }
+        
+        for (let i = collectibles.length - 1; i >= 0; i--) {
+            const c = collectibles[i];
+            const dx = bird.x - c.x;
+            const dy = bird.y - c.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < bird.width / 2 + c.radius) {
+                if (c.type === 'coin') {
+                    gameData.totalCoins += 3;
+                    matchCoins += 3;
+                    ui.coins.textContent = `💰 ${matchCoins}`;
+                    sounds.coin();
+                    createParticles(c.x, c.y, 10, 255, 215, 0); 
+                } else { 
+                    c.action();
+                    sounds.powerup();
+                    createParticles(c.x, c.y, 20, 155, 89, 182); 
+                }
+                collectibles.splice(i, 1);
+            }
+        }
+    }
+    
+    function handleCollision() {
+    if (bird.shieldActive) {
+    sounds.hit();
+    createParticles(bird.x, bird.y, 20, 52, 152, 219);
+    return;
+    }
+    
+    
+        if (bird.extraLifeActive) {
+            bird.extraLifeActive = false;
+            bird.y = canvas.height / 2;
+            bird.velocity = 0;
+            sounds.hit();
+            createParticles(bird.x, bird.y, 20, 231, 76, 60); 
+            return;
+        }
+        gameOver();
+    }
+    
+    // --- Game State Control (Modified to remove initial 'active' class on menu) ---
+    function startGame() {
+        resetGame();
+        gameState = 'playing';
+        ui.mainMenu.classList.remove('active');
+        ui.gameOverMenu.classList.remove('active');
+        ui.infoMenu.classList.remove('active');
+        ui.newsMenu.classList.remove('active');
+        ui.inGameUI.style.display = 'block';
+    }
+
+    function gameOver() {
+        if (gameState === 'gameover') return;
+        sounds.hit();
+        gameState = 'gameover';
+        ui.inGameUI.style.display = 'none';
+        
+        if (score > gameData.highScore) {
+            gameData.highScore = score;
+        }
+        
+        updateRank();
+        saveGameData();
+        
+        ui.finalScore.textContent = `Score: ${score}`;
+        ui.highScore.textContent = `Best: ${gameData.highScore}`;
+        
+        setTimeout(() => {
+             ui.gameOverMenu.classList.add('active');
+        }, 500);
+    }
+    
+    function resetGame() {
+        bird.y = canvas.height / 2;
+        bird.velocity = 0;
+        bird.rotation = 0;
+        pipes = [];
+        collectibles = [];
+        particles = [];
+        score = 0;
+        matchCoins = 0;
+        frame = 0;
+        deactivateAllPowerups();
+        ui.score.textContent = score;
+        ui.coins.textContent = `💰 ${matchCoins}`;
+    }
+    
+    // --- Spawning Logic (UPDATED FOR THEME ROTATION) ---
+    function spawnPipe() {
+        const topHeight = Math.random() * (canvas.height - CONFIG.PIPE_GAP - 150) + 75;
+        
+        // Determine the pipe theme index based on score
+        const pipeThemeCount = PIPE_DOWN_URLS.length; // Assumes PIPE_UP_URLS has the same length
+        const themeIndex = Math.floor(score / CONFIG.PIPE_THEME_DURATION) % pipeThemeCount;
+        
+        pipes.push({ 
+            x: canvas.width, 
+            topHeight, 
+            bottomHeight: canvas.height - topHeight - CONFIG.PIPE_GAP, 
+            passed: false,
+            pipeIndex: themeIndex // Store the index of the image set to use
+        });
+        
+        const collectibleY = topHeight + CONFIG.PIPE_GAP / 2;
+        const rand = Math.random();
+        
+        if (rand < 0.15) { 
+            const powerupKeys = Object.keys(POWERUPS);
+            const randomPowerupKey = powerupKeys[Math.floor(Math.random() * powerupKeys.length)];
+            const p = POWERUPS[randomPowerupKey];
+            collectibles.push({ x: canvas.width + CONFIG.PIPE_WIDTH / 2, y: collectibleY, radius: 18, color: p.color, symbol: p.symbol, type: 'powerup', action: p.action });
+        } else {
+            collectibles.push({ x: canvas.width + CONFIG.PIPE_WIDTH / 2, y: collectibleY, radius: 15, color: '#FFD700', type: 'coin' });
+        }
+    }
+    
+    // --- Power-up Logic (No change needed) ---
+    function activatePowerup() { bird.powerupTimer = CONFIG.POWERUP_DURATION; }
+    function deactivateAllPowerups() {
+        bird.shieldActive = false;
+        bird.magnetActive = false;
+        if(bird.shrinkActive) {
+            bird.width = bird.baseWidth;
+            bird.height = bird.baseHeight;
+            bird.shrinkActive = false;
+        }
+        bird.powerupTimer = 0;
+    }
+    function activateShield() { deactivateAllPowerups(); bird.shieldActive = true; activatePowerup(); }
+    function activateMagnet() { deactivateAllPowerups(); bird.magnetActive = true; activatePowerup(); }
+    function activateExtraLife() { deactivateAllPowerups(); bird.extraLifeActive = true; }
+    function activateShrink() {
+        deactivateAllPowerups();
+        bird.shrinkActive = true;
+        bird.width = bird.baseWidth * 0.6;
+        bird.height = bird.baseHeight * 0.6;
+        activatePowerup();
+    }
+    
+    // --- Particle System (No change needed) ---
+    function createParticles(x, y, count, r, g, b) {
+        for (let i = 0; i < count; i++) {
+            particles.push({ x, y, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, size: Math.random() * 3 + 1, alpha: 1, r, g, b });
+        }
+    }
+
+    // --- UI Update and Interaction (Updated to use Image URLs) ---
+    function updateUI() {
+        ui.quietBtn.textContent = soundEnabled ? 'Sound: On' : 'Sound: Off';
+        updateShop();
+        updateBackgrounds();
+        updateBirds();
+        updateRankDisplay();
+    }
+    
+    function openMenu(menu) {
+        document.querySelectorAll('.menu').forEach(m => m.classList.remove('active'));
+        menu.classList.add('active');
+        if (gameState !== 'loading') { // Prevent sound on initial load
+            sounds.click();
+        }
+    }
+    
+    function updateShop() {
+        ui.shopItems.innerHTML = '';
+        ui.shopCoins.textContent = `💰 ${gameData.totalCoins}`;
+
+        let birdGrid = '<h2 class="shop-section-title">Birds</h2><div class="modal-grid">';
+        Object.entries(BIRDS).forEach(([key, data]) => {
+            if (data.price === 0 && key !== 'white_hen') return; // Only hide free birds if they are not the 'white_hen'
+            const isUnlocked = gameData.unlockedBirds.includes(key);
+            // Use the preview URL for the style
+            const style = `background-image: url('${data.preview}')`;
+            birdGrid += `<div class="modal-item ${isUnlocked ? '' : 'locked'}" onclick="buyBird('${key}', ${data.price})">
+                    <div class="item-preview" style="${style};"></div>
+                    <span>${data.name}</span>
+                    <span class="item-price">${isUnlocked ? 'Owned' : `💰 ${data.price}`}</span></div>`;
+        });
+        birdGrid += '</div>';
+
+        let bgGrid = '<h2 class="shop-section-title">Backgrounds</h2><div class="modal-grid">';
+        Object.entries(BACKGROUNDS).forEach(([key, data]) => {
+            if (data.price === 0 && key !== 'pixel_sky' && key !== 'fantasy_forest') return; // Only hide explicitly free BGs
+            const isUnlocked = gameData.unlockedBackgrounds.includes(key);
+            // Use the preview URL for the style
+            const style = `background-image: url('${data.preview}')`;
+             bgGrid += `<div class="modal-item ${isUnlocked ? '' : 'locked'}" onclick="buyBackground('${key}', ${data.price})">
+                    <div class="item-preview" style="${style};"></div>
+                    <span>${data.name}</span>
+                    <span class="item-price">${isUnlocked ? 'Owned' : `💰 ${data.price}`}</span></div>`;
+        });
+        bgGrid += '</div>';
+
+        ui.shopItems.innerHTML = birdGrid + bgGrid;
+    }
+    
+    window.buyBird = function(key, price) {
+        if (gameData.unlockedBirds.includes(key)) return;
+        sounds.click();
+        if (gameData.totalCoins >= price) {
+            gameData.totalCoins -= price;
+            gameData.unlockedBirds.push(key);
+            saveGameData();
+            updateShop();
+            updateBirds();
+        }
+    }
+    
+    window.buyBackground = function(key, price) {
+        if (gameData.unlockedBackgrounds.includes(key)) return;
+        sounds.click();
+        if (gameData.totalCoins >= price) {
+            gameData.totalCoins -= price;
+            gameData.unlockedBackgrounds.push(key);
+            saveGameData();
+            updateShop();
+            updateBackgrounds();
+        }
+    }
+    
+    function updateBackgrounds() {
+        ui.bgItems.innerHTML = '';
+        Object.entries(BACKGROUNDS).forEach(([key, data]) => {
+            // Only show backgrounds the user has unlocked
+            if (!gameData.unlockedBackgrounds.includes(key)) return;
+            
+            const item = document.createElement('div');
+            item.className = 'modal-item' + (gameData.selectedBackground === key ? ' selected' : '');
+            // Use the preview URL for the style
+            const style = `background-image: url('${data.preview}')`;
+            item.innerHTML = `<div class="item-preview" style="${style};"></div>
+                <span>${data.name}</span>`;
+            item.onclick = () => selectBackground(key);
+            ui.bgItems.appendChild(item);
+        });
+    }
+    
+    function selectBackground(key) {
+        sounds.click();
+        gameData.selectedBackground = key;
+        saveGameData();
+        updateBackgrounds();
+    }
+    
+    function updateBirds() {
+        ui.birdItems.innerHTML = '';
+        Object.entries(BIRDS).forEach(([key, data]) => {
+            // Only show birds the user has unlocked
+            if (!gameData.unlockedBirds.includes(key)) return;
+            
+            const item = document.createElement('div');
+            item.className = 'modal-item' + (gameData.selectedBird === key ? ' selected' : '');
+            // Use the preview URL for the style
+            const style = `background-image: url('${data.preview}')`;
+            item.innerHTML = `<div class="item-preview" style="${style};"></div>
+                <span>${data.name}</span>`;
+            item.onclick = () => selectBird(key);
+            ui.birdItems.appendChild(item);
+        });
+    }
+    
+    function selectBird(key) {
+        sounds.click();
+        gameData.selectedBird = key;
+        saveGameData();
+        updateBirds();
+    }
+    
+    function updateRank() {
+        let newRank = 'Bronze';
+        for (const [rank, data] of Object.entries(RANKS).reverse()) {
+             if (gameData.highScore >= data.score) {
+                 newRank = rank;
+                 break;
+             }
+        }
+        gameData.rank = newRank;
+    }
+    
+    function updateRankDisplay() {
+        const rankData = RANKS[gameData.rank];
+        ui.rankDisplay.innerHTML = `<div class="rank-icon" style="color: ${rankData.color};">${rankData.icon}</div>
+            <p>${gameData.rank}</p>
+            <p style="font-size: 0.7em;">Highest Score: ${gameData.highScore}</p>`;
+    }
+    
+    // --- Event Listeners (No change needed) ---
+    function setupEventListeners() {
+        function flap() { if (gameState === 'playing') { bird.velocity = CONFIG.LIFT; sounds.flap(); } }
+        canvas.addEventListener('mousedown', flap);
+        canvas.addEventListener('touchstart', e => { e.preventDefault(); flap(); });
+        window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); flap(); } });
+        
+        document.getElementById('playBtn').onclick = startGame;
+        document.getElementById('restartBtn').onclick = startGame;
+        
+        document.getElementById('shopBtn').onclick = () => { updateShop(); openMenu(ui.shopMenu); };
+        document.getElementById('bgBtn').onclick = () => { updateBackgrounds(); openMenu(ui.bgMenu); };
+        document.getElementById('birdsBtn').onclick = () => { updateBirds(); openMenu(ui.birdsMenu); };
+        document.getElementById('rankBtn').onclick = () => { updateRankDisplay(); openMenu(ui.rankMenu); };
+        
+        document.querySelectorAll('.back-btn').forEach(btn => {
+            btn.onclick = () => {
+                ui.gameOverMenu.classList.remove('active');
+                openMenu(document.getElementById(btn.dataset.target));
+            }
+        });
+        
+        ui.quietBtn.onclick = () => {
+            sounds.click();
+            soundEnabled = !soundEnabled;
+            ui.quietBtn.textContent = soundEnabled ? 'Sound: On' : 'Sound: Off';
+        };
+
+        ui.infoBtn.onclick = () => openMenu(ui.infoMenu);
+        ui.newsBtn.onclick = () => openMenu(ui.newsMenu);
+    }
+    
+    // Start the game
+    init();
+
+})();
+</script>
+ </body>
+</html>
